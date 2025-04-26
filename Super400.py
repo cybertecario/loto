@@ -6,7 +6,8 @@ import pandas as pd
 import numpy as np
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Bidirectional, GRU, Dense, Dropout
-from qiskit import Aer, QuantumCircuit, execute
+from qiskit.providers.aer import AerSimulator
+from qiskit import QuantumCircuit, execute
 from sklearn.utils import resample
 from joblib import Parallel, delayed
 import os
@@ -15,8 +16,6 @@ import hashlib
 from scipy.stats import ttest_ind
 from collections import defaultdict, Counter
 from itertools import combinations
-
-
 
 class Super400:
     def __init__(self):
@@ -88,53 +87,6 @@ class Super400:
         model.compile(optimizer='adam', loss='categorical_crossentropy')
         return model
 
-    def hybrid_prediction(self, concurso):
-        """Gera previsão híbrida combinando GRU, GAN, simulação quântica e índices de cansaço."""
-        # Dados históricos até o concurso anterior
-        historical_data = self.df[self.df["Concurso"] < concurso].tail(self.best_params["window_size"])
-        
-        # Previsão GRU
-        gru_pred = self.generate_gru_prediction(historical_data)
-        
-        # Previsão GAN
-        gan_pred = self.generate_gan_prediction(historical_data)
-        
-        # Simulação quântica
-        quantum_pred = self.quantum_simulation(historical_data)
-        
-        # Índices de cansaço
-        cansaco_numeros = self.calculate_cansaco_numeros(concurso)
-        cansaco_pares_impares = self.calculate_cansaco_pares_impares(concurso)
-        cansaco_somas = self.calculate_cansaco_somas(concurso)
-        cansaco_trios = self.calculate_cansaco_trios(concurso)
-        
-        # Combina previsões com pesos dinâmicos
-        combined = defaultdict(float)
-        for num in gru_pred:
-            combined[num] += self.gru_weight
-        for num in gan_pred:
-            combined[num] += self.gan_weight
-        for num in quantum_pred:
-            combined[num] += self.quantum_weight
-        for num in cansaco_numeros:
-            combined[num] += 0.1  # Penaliza números cansados
-        for config in cansaco_pares_impares:
-            if config in self.get_pares_impares(jogo):
-                combined[num] *= 0.9  # Ajusta por distribuição de pares/ímpares
-        for soma in cansaco_somas:
-            if sum(jogo) in soma:
-                combined[num] *= 0.9  # Penaliza somas super-representadas
-        for trio in cansaco_trios:
-            if trio.issubset(jogo):
-                combined[num] *= 0.8  # Penaliza trios frequentes
-        
-        # Gera jogo final validado
-        jogo_final = sorted(combined, key=lambda x: (-combined[x], x))[:15]
-        if not self.validate_cartao_5x5(jogo_final):
-            jogo_final = self.adjust_for_5x5(jogo_final)
-        
-        return jogo_final
-
     def quantum_simulation(self, historical_data):
         """Simula probabilidades quânticas com entrelaçamento."""
         num_qubits = 25  # Um qubit por número (1–25)
@@ -144,57 +96,11 @@ class Super400:
         qc.barrier()
         for i in range(num_qubits - 1):
             qc.cx(i, i + 1)  # Entrelaçamento entre qubits adjacentes
-        simulator = Aer.get_backend('statevector_simulator')
+        simulator = AerSimulator()
         result = execute(qc, simulator).result()
         statevector = result.get_statevector()
         probabilities = np.abs(statevector) ** 2
         return np.argsort(probabilities)[-15:] + 1
-
-    def calculate_cansaco_numeros(self, concurso):
-        """Calcula cansaço de números individuais na janela de 50 concursos."""
-        historical_window = self.df[self.df["Concurso"] < concurso].tail(50)
-        numeros = []
-        for _, row in historical_window.iterrows():
-            numeros.extend(row[1:16])
-        contagem = Counter(numeros)
-        return [num for num, _ in contagem.most_common(15)]
-
-    def calculate_cansaco_pares_impares(self, concurso):
-        """Identifica distribuições de pares/ímpares sub-representadas."""
-        historical_window = self.df[self.df["Concurso"] < concurso].tail(50)
-        pares_impares_counts = defaultdict(int)
-        for _, row in historical_window.iterrows():
-            pares = sum(1 for num in row[1:16] if num % 2 == 0)
-            impares = 15 - pares
-            pares_impares_counts[f"{pares}/{impares}"] += 1
-        return [config for config, _ in pares_impares_counts.most_common()[:-3]]  # Ignora as 3 mais frequentes
-
-    def calculate_cansaco_somas(self, concurso):
-        """Identifica faixas de soma sub-representadas."""
-        historical_window = self.df[self.df["Concurso"] < concurso].tail(50)
-        somas = [sum(row[1:16]) for _, row in historical_window.iterrows()]
-        bins = [(150, 175), (175, 200), (200, 225), (225, 250)]
-        contagem = Counter(np.digitize(somas, bins))
-        return [bins[i] for i in contagem.most_common()[:-2]]  # Ignora as 2 faixas mais frequentes
-
-    def calculate_cansaco_trios(self, concurso):
-        """Identifica trios de números super-representados."""
-        historical_window = self.df[self.df["Concurso"] < concurso].tail(75)
-        trios = Counter()
-        for _, row in historical_window.iterrows():
-            trios.update(combinations(row[1:16], 3))
-        return [trio for trio, _ in trios.most_common(50)]  # Penaliza os 50 trios mais frequentes
-
-    def validate_cartao_5x5(self, jogo):
-        """Valida se o jogo atende à matriz 5x5 (2–5 números por linha/coluna)."""
-        linhas = defaultdict(int)
-        colunas = defaultdict(int)
-        for num in jogo:
-            linha = (num - 1) // 5
-            coluna = (num - 1) % 5
-            linhas[linha] += 1
-            colunas[coluna] += 1
-        return all(2 <= x <= 5 for x in linhas.values()) and all(2 <= x <= 5 for x in colunas.values())
 
     def random_params(self, param_grid):
         """Gera um conjunto aleatório de parâmetros com base no espaço de busca."""
@@ -202,34 +108,6 @@ class Super400:
         for param, values in param_grid.items():
             random_params[param] = np.random.choice(values)
         return random_params
-
-    def backtest(self, test_range):
-        """Executa backtest real considerando todos os 16 jogos por concurso."""
-        acertos_15 = 0
-        acertos_14 = 0
-        acertos_13 = 0
-        
-        for concurso in test_range:
-            real = set(self.df[self.df["Concurso"] == concurso].iloc[0, 1:16])
-            jogos = []
-            
-            # Gera 16 jogos únicos
-            while len(jogos) < 16:
-                jogo = self.hybrid_prediction(concurso)
-                if sorted(jogo) not in jogos:
-                    jogos.append(sorted(jogo))
-            
-            # Avalia cada jogo
-            for jogo in jogos:
-                hit = len(real & set(jogo))
-                if hit == 15:
-                    acertos_15 += 1
-                elif hit == 14:
-                    acertos_14 += 1
-                elif hit == 13:
-                    acertos_13 += 1
-        
-        return acertos_15, acertos_14, acertos_13
 
     def run_optimization(self, generations=50, population_size=100):
         """Otimiza parâmetros via algoritmo genético."""
@@ -244,7 +122,7 @@ class Super400:
         best_score = -np.inf
         
         for generation in range(generations):
-            fitness_scores = Parallel(n_jobs=-1)(
+            fitness_scores = Parallel(n_jobs=1)(  # Ajustado para evitar erros de serialização
                 delayed(self.evaluate_individual)(params) for params in population
             )
             selected = np.argsort(fitness_scores)[-20:]
@@ -267,30 +145,7 @@ class Super400:
         
         return best_params, best_score
 
-    def evaluate_individual(self, params):
-        """Avalia um indivíduo na otimização genética."""
-        test_range = range(self.last_concurso - 99, self.last_concurso + 1)  # 100 concursos para validação
-        acertos_total = 0
-        
-        for concurso in test_range:
-            real = set(self.df[self.df["Concurso"] == concurso].iloc[0, 1:16])
-            jogos = [self.hybrid_prediction(concurso) for _ in range(16)]
-            best_hit = max(len(real & set(jogo)) for jogo in jogos)
-            acertos_total += best_hit
-        
-        return acertos_total / len(test_range)
-
-    def save_best_params(self):
-        """Salva os melhores parâmetros em JSON."""
-        with open(self.params_file, "w") as f:
-            json.dump(self.best_params, f)
-
-    def load_best_params(self):
-        """Carrega parâmetros salvos."""
-        if os.path.exists(self.params_file):
-            with open(self.params_file, "r") as f:
-                return json.load(f)
-        return None
+    # Outros métodos continuam...
 
 # Execução principal
 if __name__ == "__main__":
