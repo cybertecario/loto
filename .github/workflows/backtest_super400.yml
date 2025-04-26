@@ -27,14 +27,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas numpy tensorflow qiskit scikit-learn joblib scipy
       
-      # Passo 4: Executar o script e salvar os resultados
+      # Passo 4: Executar o script
       - name: Run Backtest
         run: python "Super400.py"
 
-      # Passo 5: Upload dos resultados do backtest
-      - name: Upload Backtest Results
-        uses: actions/upload-artifact@v2
-        with:
-          name: backtest-results
-          path: |
-            backups/*.csv
+      # Passo 5: Instalar o GitHub CLI para upload manual
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get install -y gh
+          gh auth login --with-token <<< "$GITHUB_TOKEN"
+
+      # Passo 6: Upload dos resultados
+      - name: Upload Results
+        run: |
+          gh release create backtest-results backups/*.csv -t "Backtest Results" -n "Resultados do backtest gerados automaticamente."
