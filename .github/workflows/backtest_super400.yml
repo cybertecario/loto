@@ -19,13 +19,13 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'  # Versão compatível com TensorFlow
+          python-version: '3.10'  # Versão compatível com TensorFlow e Qiskit
 
       # Passo 3: Instalar as dependências
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas numpy==1.21.6 tensorflow==2.9.0 qiskit scikit-learn joblib scipy
+          pip install pandas numpy==1.21.6 tensorflow==2.9.0 qiskit==0.41.0 qiskit-aer==0.11.2 scikit-learn joblib scipy
       
       # Passo 4: Executar o script
       - name: Run Backtest
