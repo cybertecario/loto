@@ -16,6 +16,8 @@ from scipy.stats import ttest_ind
 from collections import defaultdict, Counter
 from itertools import combinations
 
+
+
 class Super400:
     def __init__(self):
         # Backup e validação do CSV
@@ -193,6 +195,13 @@ class Super400:
             linhas[linha] += 1
             colunas[coluna] += 1
         return all(2 <= x <= 5 for x in linhas.values()) and all(2 <= x <= 5 for x in colunas.values())
+
+    def random_params(self, param_grid):
+        """Gera um conjunto aleatório de parâmetros com base no espaço de busca."""
+        random_params = {}
+        for param, values in param_grid.items():
+            random_params[param] = np.random.choice(values)
+        return random_params
 
     def backtest(self, test_range):
         """Executa backtest real considerando todos os 16 jogos por concurso."""
