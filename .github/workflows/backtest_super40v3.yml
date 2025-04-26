@@ -1,0 +1,40 @@
+name: Run Backtest for Super40 v3
+
+on:
+  workflow_dispatch: # Permite execução manual
+  push: # Executa automaticamente em cada push para o branch principal
+    branches:
+      - main
+
+jobs:
+  run-backtest:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Passo 1: Fazer o checkout do código
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Passo 2: Configurar o Python
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      # Passo 3: Instalar as dependências
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy
+      
+      # Passo 4: Executar o script e salvar os resultados
+      - name: Run Backtest
+        run: python "Super40 v3.py"
+
+      # Passo 5: Upload dos resultados do backtest
+      - name: Upload Backtest Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: backtest-results
+          path: |
+            backtest_super40v3_*.csv
