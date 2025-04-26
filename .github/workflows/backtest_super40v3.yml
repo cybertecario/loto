@@ -33,7 +33,7 @@ jobs:
 
       # Passo 5: Upload dos resultados do backtest
       - name: Upload Backtest Results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: backtest-results
           path: |
