@@ -30,11 +30,3 @@ jobs:
       # Passo 4: Executar o script
       - name: Run Backtest
         run: python "Super400.py"
-
-      # Passo 5: Upload dos resultados do backtest
-      - name: Upload Backtest Results
-        uses: actions/upload-artifact@v2
-        with:
-          name: backtest-results
-          path: |
-            backups/*.csv
